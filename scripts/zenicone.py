@@ -56,16 +56,19 @@ def download_zenic_hightemp_alarms():
         wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="default"]/plx-dropdown-pop-window/div/div/div[3]/div/span'))).click() 
 
         iframe = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "page-mainIframefm")))
-        driver.switch_to.frame(iframe)
+        driver.switch_to.frame(iframe) 
         wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="condition-tree"]/button'))).click() 
-        wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="23"]/div/div[2]/div[1]/span/span'))).click()
+        wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="1"]/div/div[2]/div[1]/span/span'))).click() 
         export_btn = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="operationBar"]/div[1]/div/div[1]/alarm-export/div/div/button'))) 
         export_btn.click()
         
         export_btn2 = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="fmbody"]/div/cmcc-export-operation[2]/export-operation'))) 
         export_btn2.click()
-
-        export_btn3 = WebDriverWait(driver, 40).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="exportOkBtn"]')))
+        time.sleep(1)
+        display_columns = WebDriverWait(driver, 40).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="exportDlg"]/div[1]/div/div[2]/label[2]/div')))
+        display_columns.click()
+        time.sleep(1)
+        export_btn3 = WebDriverWait(driver, 40).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="exportOkBtn"]'))) 
         export_btn3.click()
         time.sleep(10)
 
