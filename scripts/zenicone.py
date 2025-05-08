@@ -1,5 +1,7 @@
 import os
 import time
+import zipfile
+import pandas as pd
 from pathlib import Path
 from dotenv import load_dotenv
 from selenium import webdriver
@@ -38,6 +40,7 @@ def get_driver():
 
 
 def download_zenic_hightemp_alarms():
+    """Функция скачивает архивированный файл с авариями из ZenicOne"""
     driver = get_driver()
     try:
         driver.get(zenic_home_url)
@@ -76,5 +79,42 @@ def download_zenic_hightemp_alarms():
         driver.quit()
 
 
+def get_latest_zip_file(folder_path):
+    """Возвращает путь к ластовому скачанному ZIP'y"""
+    zip_files = list(Path(folder_path).glob('*.zip'))
+    if not zip_files:
+        raise FileNotFoundError('There is no ZIP files.')
+    
+    latest_zip = max(zip_files, key=lambda x: x.stat().st_mtime)
+    return latest_zip
+
+
+def extract_xlsx_from_zip(zip_filepath, extract_to_folder):
+    """Извлекает xlsx файл из.zip"""
+    with zipfile.ZipFile(zip_filepath, 'r') as zip_ref:
+        zip_ref.extractall(extract_to_folder)
+        extracted_files = zip_ref.namelist() # poluchil spisok faylov
+    return extracted_files
+
+def process_zenic_hightemp_excel(excel_filepath):
+    df = pd.read_excel(excel_filepath)
+    return df
+
+
+def get_zenicone_alarms():
+    """Func скачивает zip, извлекает xlsx, возвращает df с авариями."""
+    download_zenic_hightemp_alarms() # Скачиваю зип
+
+    zip_filepath = get_latest_zip_file(download_path) 
+    extracted_files = extract_xlsx_from_zip(zip_filepath, download_path)
+
+    excel_filepath = Path(download_path) / extracted_files[0]
+
+    zenic_hightemp_alarms_df = process_zenic_hightemp_excel(excel_filepath)
+
+    return zenic_hightemp_alarms_df
+
+
 if __name__ == '__main__':
-    download_zenic_hightemp_alarms()
+    df = get_zenicone_alarms()
+    print(df.head())
