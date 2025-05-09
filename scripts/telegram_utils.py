@@ -12,12 +12,14 @@ bot = Bot(token=TELEGRAM_TOKEN)
 async def send_alarm_message(alarm):
     """Отправляет сообщение о новой аварии"""
     message = (
-        f"🆔 `{alarm['id']}`\n"
+        f"\n"
+        f"🆔 `{alarm['id']}`\n\n"
+
         f"⚠️ *Link*: `{alarm['link']}`\n"
         f"📛 *Alarm*: `{alarm['alarm_name']}`\n"
         f"⏰ *Start Time*: `{alarm['start_time']}`\n"
+        f"⚙️ *Sites Behind Count*: `{alarm['sites_behind']}`\n"
         f"🔗 *Sites Behind*: `{alarm['mess']}`\n"
-        f"⚙️ *Sites Behind Count*: `{alarm['sites_behind']}`"
     )
 
     await bot.send_message(

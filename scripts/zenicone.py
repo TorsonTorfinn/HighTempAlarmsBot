@@ -73,10 +73,24 @@ def download_zenic_hightemp_alarms():
         time.sleep(1)
         export_btn3 = WebDriverWait(driver, 40).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="exportOkBtn"]'))) 
         export_btn3.click()
-        time.sleep(10)
+        time.sleep(15)
 
     finally:
+        try: 
+            driver.switch_to.default_content()
+            time.sleep(1)
+            user_btn = driver.find_element(By.XPATH, '//*[@id="header_dropdown_user"]')
+            user_btn.click()
+            logout = driver.find_element(By.XPATH, '//*[@id="header_dropdown_user"]/div/ptl-user-dropdown/ul/li[5]/a')
+            logout.click()
+            time.sleep(1)
+            logout_btn = driver.find_element(By.XPATH, '/html/body/plx-modal-window/div[2]/div/div[3]/div/div/button[1]') 
+            logout_btn.click()
+            time.sleep(10)
+        except Exception:
+            pass
         driver.quit()
+
 
 
 def get_latest_zip_file(folder_path):
