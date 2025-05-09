@@ -87,6 +87,8 @@ def filter_alarms(df_zenic, df_sitebehind):
                 'id': f'{link}-{row['Alarm Code']}',
                 'link': link,
                 'alarm_name': row['Alarm Code Name'],
+                'alarm_severity': row['Alarm Severity'],
+                'position': row['Position'],
                 'start_time': row['Occurrence Time'],
                 'mess': mess,
                 'sites_behind': sites_behind

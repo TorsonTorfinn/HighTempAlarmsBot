@@ -73,7 +73,7 @@ def download_zenic_hightemp_alarms():
         time.sleep(1)
         export_btn3 = WebDriverWait(driver, 40).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="exportOkBtn"]'))) 
         export_btn3.click()
-        time.sleep(15)
+        time.sleep(13)
 
     finally:
         try: 
@@ -86,7 +86,7 @@ def download_zenic_hightemp_alarms():
             time.sleep(1)
             logout_btn = driver.find_element(By.XPATH, '/html/body/plx-modal-window/div[2]/div/div[3]/div/div/button[1]') 
             logout_btn.click()
-            time.sleep(10)
+            time.sleep(5)
         except Exception:
             pass
         driver.quit()

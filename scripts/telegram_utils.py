@@ -17,6 +17,8 @@ async def send_alarm_message(alarm):
 
         f"⚠️ *Link*: `{alarm['link']}`\n"
         f"📛 *Alarm*: `{alarm['alarm_name']}`\n"
+        f"🚨 *Severity*: `{alarm['alarm_severity']}`\n"
+        f"🔌 *Position*: `{alarm['position']}`\n"
         f"⏰ *Start Time*: `{alarm['start_time']}`\n"
         f"⚙️ *Sites Behind Count*: `{alarm['sites_behind']}`\n"
         f"🔗 *Sites Behind*: `{alarm['mess']}`\n"
