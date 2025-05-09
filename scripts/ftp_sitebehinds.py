@@ -25,10 +25,10 @@ def parse_date_from_filename(filename):
     return None
 
 
-def download_latest_ftp_file(host, password, user, download_folder=local_download_path):
+def download_latest_ftp_file(host, user, password, download_folder=local_download_path):
     """Скачивает последний актуальный файл sitebehind с FTP и возвращает локальный путь"""
     ftp = FTP(host)
-    ftp.login(ftp_user, password)
+    ftp.login(user, password)
     ftp.cwd(ftp_dir)
 
     files = ftp.nlst()
@@ -68,4 +68,5 @@ if __name__ == '__main__':
     #testpestfestgest
     path = download_latest_ftp_file(ftp_host, ftp_pass, ftp_user)
     df = read_sitebehinds_csv(path)
-    print(df.head())
+    print('YOUR DF IS BELOW')
+    print(df)

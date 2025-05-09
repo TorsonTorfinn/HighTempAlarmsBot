@@ -8,7 +8,8 @@ load_dotenv(dotenv_path='.env')
 
 TG_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 GROUP_ID = int(os.getenv('GROUP_ID'))
-print(GROUP_ID)
+
+
 bot = Bot(token=TG_BOT_TOKEN)
 
 async def send_test_message():
