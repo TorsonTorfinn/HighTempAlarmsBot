@@ -51,10 +51,9 @@ def download_zenic_hightemp_alarms():
         time.sleep(1)
         password_field = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="inputCiphercode"]')))
         password_field.send_keys(password)
-        time.sleep(1)
         wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="loginBut"]'))).click()
         wait.until(EC.url_to_be(zenic_home_url))
-        time.sleep(3)
+        time.sleep(2)
         driver.get(zenic_alarms_url)
         wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="default"]/plx-dropdown-pop-window/div/div/div[3]/div/span'))).click() 
 
@@ -73,7 +72,7 @@ def download_zenic_hightemp_alarms():
         time.sleep(1)
         export_btn3 = WebDriverWait(driver, 40).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="exportOkBtn"]'))) 
         export_btn3.click()
-        time.sleep(13)
+        time.sleep(8)
 
     finally:
         try: 
@@ -86,7 +85,7 @@ def download_zenic_hightemp_alarms():
             time.sleep(1)
             logout_btn = driver.find_element(By.XPATH, '/html/body/plx-modal-window/div[2]/div/div[3]/div/div/button[1]') 
             logout_btn.click()
-            time.sleep(5)
+            time.sleep(2)
         except Exception:
             pass
         driver.quit()
