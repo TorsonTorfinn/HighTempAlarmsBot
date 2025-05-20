@@ -23,6 +23,9 @@ zenic_alarms_url = os.getenv('alarms_url')
 
 def get_driver():
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument('--headless')  # для headless-режима
+    chrome_options.add_argument('--no-sandbox')  # отключает песочницу
+    chrome_options.add_argument('--disable-dev-shm-usage')  # фикс краша на Linux
     chrome_options.add_argument('--ignore-certificate-errors')
     chrome_options.add_argument('--ignore-ssl-errors')
     chrome_options.add_argument('--disable-autofill')
