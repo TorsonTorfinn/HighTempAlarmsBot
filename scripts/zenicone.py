@@ -23,9 +23,9 @@ zenic_alarms_url = os.getenv('alarms_url')
 
 def get_driver():
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument('--headless')  # для headless-режима
-    chrome_options.add_argument('--no-sandbox')  # отключает песочницу
-    chrome_options.add_argument('--disable-dev-shm-usage')  # фикс краша на Linux
+    # chrome_options.add_argument('--headless')  # для headless-режима
+    # chrome_options.add_argument('--no-sandbox')  # отключает песочницу
+    # chrome_options.add_argument('--disable-dev-shm-usage')  # фикс краша на Linux
     chrome_options.add_argument('--ignore-certificate-errors')
     chrome_options.add_argument('--ignore-ssl-errors')
     chrome_options.add_argument('--disable-autofill')
@@ -81,9 +81,9 @@ def download_zenic_hightemp_alarms():
         try: 
             driver.switch_to.default_content()
             time.sleep(1)
-            user_btn = driver.find_element(By.XPATH, '//*[@id="header_dropdown_user"]')
+            user_btn = driver.find_element(By.XPATH, '//*[@id="header_dropdown_user"]/a')
             user_btn.click()
-            logout = driver.find_element(By.XPATH, '//*[@id="header_dropdown_user"]/div/ptl-user-dropdown/ul/li[5]/a')
+            logout = driver.find_element(By.XPATH, '//*[@id="header_dropdown_user"]/div/ptl-user-dropdown/ul/li[6]/a')
             logout.click()
             time.sleep(1)
             logout_btn = driver.find_element(By.XPATH, '/html/body/plx-modal-window/div[2]/div/div[3]/div/div/button[1]') 
