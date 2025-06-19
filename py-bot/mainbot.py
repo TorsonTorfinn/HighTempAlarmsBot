@@ -92,7 +92,7 @@ async def main():
                 for i, alarm in enumerate(new_alarms, 1):
                     try:
                         await send_alarm_message(alarm)
-                        sent_alarms.add(alarm['alarmcode'])  # Добавляем линк в отправленные
+                        sent_alarms.add(alarm['me'])  # Добавляем линк в отправленные, исправлено alarmcode на me
                         print(f"Отправлено {i}/{len(new_alarms)}")
                     except Exception as e:
                         print(f"Ошибка при отправке {i}-го сообщения: {e}")
