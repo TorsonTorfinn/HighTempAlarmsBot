@@ -11,3 +11,5 @@ __pycache__/
 data
 
 dict_regions.py
+
+py-bot/sent_alarms.json
