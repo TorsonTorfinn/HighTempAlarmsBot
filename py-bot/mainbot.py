@@ -34,20 +34,44 @@ SENT_ALARM_FILE = 'sent_alarms.json'
 bot = Bot(token=TELEGRAM_TOKEN, session=AiohttpSession(proxy=str(PROXY_URL)))
 
 
+def get_region(site_id):
+    """Определяет ID Telegram-группы по первым двум символам site_id из переменных окружения"""
+    region_mapping = {
+        'AN': os.getenv('CHAT_ID_AN'),
+        'BH': os.getenv('CHAT_ID_BH'),
+        'DZ': os.getenv('CHAT_ID_DZ'),
+        'FR': os.getenv('CHAT_ID_FR'),
+        'KR': os.getenv('CHAT_ID_KR'),
+        'KS': os.getenv('CHAT_ID_KS'),
+        'KH': os.getenv('CHAT_ID_KH'),
+        'NV': os.getenv('CHAT_ID_NV'),
+        'SM': os.getenv('CHAT_ID_SM'),
+        'SR': os.getenv('CHAT_ID_SR'),
+        'SU': os.getenv('CHAT_ID_SU'),
+    }
+    region_code = site_id[:2] if len(site_id) >= 2 else ""
+    chat_id = region_mapping.get(region_code, TELEGRAM_CHAT_ID)
+    if chat_id == TELEGRAM_CHAT_ID:
+        logging.warning(f"Region not found for site_id {site_id}, using default chat_id {chat_id}")
+    if chat_id == None:
+        logging.error(f"No chat_id found for region {region_code} and no default GROUP_ID")
+    return chat_id
+
+
 def load_sent_alarms():
-    """Func zagrujaet list otpravlennix avariy iz json"""
+    """Функция загружает список отправленных аварий из JSON-файла"""
     try:
         with open(SENT_ALARM_FILE, 'r') as file:
             sent_alarms = set(json.load(file))
             logging.debug(f"Loaded {len(sent_alarms)} sent alarms from {SENT_ALARM_FILE}")
             return sent_alarms
     except (FileNotFoundError, json.JSONDecodeError):
-        logging.info(f"No existing alarms file found or invalid JSON, starting woth empty set.")
+        logging.info(f"No existing alarms file found or invalid JSON, starting with empty set.")
         return set()
     
 
 def save_sent_alarms(sent_alarms):
-    """Func saves list sent alarms to the JSON"""
+    """Функция сохраняет список отправленных аварий в JSON-файл"""
     try:
         with open(SENT_ALARM_FILE, 'w') as file:
             json.dump(list(sent_alarms), file)

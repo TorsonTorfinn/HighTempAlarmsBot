@@ -13,3 +13,5 @@ data
 dict_regions.py
 
 py-bot/sent_alarms.json
+py-bot/bot.log
+tt.py
