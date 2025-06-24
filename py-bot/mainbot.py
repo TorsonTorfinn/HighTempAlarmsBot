@@ -31,7 +31,7 @@ PROXY_URL = os.getenv('PROXY_URL')
 SENT_ALARM_FILE = 'sent_alarms.json'
 
 # init the highTempBot
-bot = Bot(token=TELEGRAM_TOKEN, session=AiohttpSession(proxy=str(PROXY_URL)))
+bot = Bot(token=TELEGRAM_TOKEN) # , session=AiohttpSession(proxy=str(PROXY_URL))
 
 
 def get_region(site_id):
@@ -78,11 +78,10 @@ def save_sent_alarms(sent_alarms):
         logging.debug(f"Saved {len(sent_alarms)} alarms to {SENT_ALARM_FILE}")
     except Exception as e:
         logging.error(f"Failed to save alarms to {SENT_ALARM_FILE}: {e}")
-        return []
 
 
 async def fetch_alarms():
-    """Func fetches alarms from NIMS API"""
+    """Функция получает аварии с API NIMS"""
     try: 
         async with aiohttp.ClientSession() as session:
             headers = {"Authorization": f"Token {API_TOKEN}"}
@@ -100,7 +99,7 @@ async def fetch_alarms():
             
 
 async def send_alarm_message(alarm):
-    """Func sends a new message about high temp alarm on link"""
+    """Функция отправляет сообщение о новой аварии в соответствующую региональную группу"""
     try:
         start_time = datetime.fromisoformat(alarm['alarmraisedtime'].replace('Z', '+00:00'))
         start_time = start_time.astimezone(timezone(timedelta(hours=5))) # +05:00
@@ -108,6 +107,14 @@ async def send_alarm_message(alarm):
     except (ValueError, KeyError) as e:
         formatted_time = alarm.get('alarmraisedtime', 'Неизвестно')
         logging.warning(f"Failed to format time for alarm {alarm.get('me', 'unknown')}: {e}")
+
+    me = alarm.get('me', '')
+    chat_id = get_region(me)
+    if chat_id is None:
+        logging.error(f"Skipping message for alarm {me} no valid chat_id")
+        return
+    logging.debug(f"Sending message for alarm {me} to the chat_id {chat_id}")
+
 
     message = (
         f"\n"
@@ -120,13 +127,13 @@ async def send_alarm_message(alarm):
 
     try:
         await bot.send_message(
-            chat_id=TELEGRAM_CHAT_ID,
+            chat_id=chat_id,
             text=message,
             parse_mode='HTML'
         )
-        logging.info(f"Sent message for alarm on link {alarm['me']}")
+        logging.info(f"Sent message for alarm on link {me} to chat_id {chat_id}")
     except Exception as e:
-        logging.error(f"Failed to send message for alarm {alarm.get('me', 'unknown')}: {e}")
+        logging.error(f"Failed to send message for alarm {me} to chat_id {chat_id}: {e}")
 
 
 async def main():
