@@ -8,13 +8,15 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 from aiogram import Bot
-from aiogram.utils.markdown import hcode, hbold
+from aiogram.utils.markdown import hcode, hbold, hlink
 from aiogram.client.session.aiohttp import AiohttpSession
 
-# logging + rotation
+# логированиe с ротацией + консольны вывод
 handler = RotatingFileHandler('bot.log', maxBytes=50*1024*1024, backupCount=25) # 50 mb, 25 archives
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 logging.basicConfig(
-    handlers=[handler],
+    handlers=[handler, console_handler],
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -23,12 +25,20 @@ env_path = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('GROUP_ID')
+TELEGRAM_CHAT_ID = os.getenv('GROUP_ID') # reserved chat_id
 API_URL = os.getenv('API_NIMS_HIGHTEMP')
 API_TOKEN = os.getenv('TOKEN_NIMS_HIGHTEMP')
 PROXY_URL = os.getenv('PROXY_URL')
 
 SENT_ALARM_FILE = 'sent_alarms.json'
+
+COMMON_ENGINEERS = [username.strip() for username in os.getenv('COMMON_ENGINEERS', '').split(',') if username.strip()]
+REGION_ENGINEERS = {}
+regions = ['AN', 'BH', 'DZ', 'TS', 'SR', 'SU', 'KR', 'KS', 'FR', 'NM', 'NV', 'SM', 'KH']
+for region in regions:
+    engineers_str = os.getenv(f"{region}_ENGINEERS", '')
+    if engineers_str:
+        REGION_ENGINEERS[region] = [username.strip() for username in engineers_str.split(',') if username.strip()]
 
 # init the highTempBot
 bot = Bot(token=TELEGRAM_TOKEN) # , session=AiohttpSession(proxy=str(PROXY_URL))
@@ -55,7 +65,7 @@ def get_region(site_id):
         logging.warning(f"Region not found for site_id {site_id}, using default chat_id {chat_id}")
     if chat_id == None:
         logging.error(f"No chat_id found for region {region_code} and no default GROUP_ID")
-    return chat_id
+    return chat_id, region_code
 
 
 def load_sent_alarms():
@@ -109,12 +119,20 @@ async def send_alarm_message(alarm):
         logging.warning(f"Failed to format time for alarm {alarm.get('me', 'unknown')}: {e}")
 
     me = alarm.get('me', '')
-    chat_id = get_region(me)
+    chat_id, region_code = get_region(me)
     if chat_id is None:
         logging.error(f"Skipping message for alarm {me} no valid chat_id")
         return
     logging.debug(f"Sending message for alarm {me} to the chat_id {chat_id}")
 
+    # упоминания инженеров
+    engineer_mentions = COMMON_ENGINEERS.copy()
+    region_engineers = REGION_ENGINEERS.get(region_code, [])
+    if not region_engineers:
+        logging.warning(f"No engineers defined for region {region_code}")
+    engineer_mentions.extend(region_engineers)
+
+    engineers_text = f"👷 {hbold('Инженеры')}: {', '.join(engineer_mentions)}\n" if engineer_mentions else ""
 
     message = (
         f"\n"
@@ -123,6 +141,7 @@ async def send_alarm_message(alarm):
         f"💬 {hbold('Comment')}: {hcode(alarm['comment'])}\n"
         f"⏰ {hbold('Start Time')}: {hcode(formatted_time)}\n"
         f"🔗 {hbold('Sites Behind')}: {hcode(alarm['sitesbehind'])}\n"
+        f"{engineers_text}"
     )
 
     try:
