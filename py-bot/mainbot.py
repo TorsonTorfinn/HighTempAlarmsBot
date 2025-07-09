@@ -141,6 +141,7 @@ async def send_alarm_message(alarm):
         f"💬 {hbold('Comment')}: {hcode(alarm['comment'])}\n"
         f"⏰ {hbold('Start Time')}: {hcode(formatted_time)}\n"
         f"🔗 {hbold('Sites Behind')}: {hcode(alarm['sitesbehind'])}\n"
+        f"{hbold('Last 3 days count')}: {hcode(alarm['last_3days_count'])}"
         f"{engineers_text}"
     )
 
