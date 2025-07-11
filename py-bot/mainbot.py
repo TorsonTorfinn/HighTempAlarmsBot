@@ -40,6 +40,7 @@ for region in regions:
     engineers_str = os.getenv(engineers_key, '')
     if engineers_str:
         REGION_ENGINEERS['region'] = [username.strip() for username in engineers_str.split(',') if username.strip()]
+        
 
 # init the highTempBot
 bot = Bot(token=TELEGRAM_TOKEN, session=AiohttpSession(proxy=str(PROXY_URL))) # , session=AiohttpSession(proxy=str(PROXY_URL))
@@ -154,7 +155,7 @@ async def send_alarm_message(alarm):
         f"💬 {hbold('Comment')}: {hcode(alarm['comment'])}\n"
         f"⏰ {hbold('Start Time')}: {hcode(formatted_time)}\n"
         f"🔗 {hbold('Sites Behind')}: {hcode(alarm['sitesbehind'])}\n"
-        f"{hbold('Last 3 days count')}: {hcode(alarm['last_3days_count'])}"
+        f"📊 {hbold('Last 3 days count')}: {hcode(alarm['last_3days_count'])}\n"
         f"{engineers_text}"
     )
 
