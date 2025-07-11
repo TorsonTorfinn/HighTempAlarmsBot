@@ -42,7 +42,7 @@ for region in regions:
         REGION_ENGINEERS['region'] = [username.strip() for username in engineers_str.split(',') if username.strip()]
 
 # init the highTempBot
-bot = Bot(token=TELEGRAM_TOKEN) # , session=AiohttpSession(proxy=str(PROXY_URL))
+bot = Bot(token=TELEGRAM_TOKEN, session=AiohttpSession(proxy=str(PROXY_URL))) # , session=AiohttpSession(proxy=str(PROXY_URL))
 
 
 def get_region(alarm):
