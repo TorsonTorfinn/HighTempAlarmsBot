@@ -30,42 +30,52 @@ API_URL = os.getenv('API_NIMS_HIGHTEMP')
 API_TOKEN = os.getenv('TOKEN_NIMS_HIGHTEMP')
 PROXY_URL = os.getenv('PROXY_URL')
 
-SENT_ALARM_FILE = 'sent_alarms.json'
+SENT_ALARM_FILE = 'sent_alarms.json'  
 
 COMMON_ENGINEERS = [username.strip() for username in os.getenv('COMMON_ENGINEERS', '').split(',') if username.strip()]
 REGION_ENGINEERS = {}
-regions = ['AN', 'BH', 'DZ', 'TS', 'SR', 'SU', 'KR', 'KS', 'FR', 'NM', 'NV', 'SM', 'KH']
+regions = ["TASHKENTREGION","ANDIJAN","NAMANGAN","FERGANA","TASHKENT","BUKHARA","SURKHANDARYA","DJIZZAK","SIRDARYA","NAVOI","SAMARKAND","KHOREZM","KARAKALPAKISTAN","KASHKADARYA"]
 for region in regions:
-    engineers_str = os.getenv(f"{region}_ENGINEERS", '')
+    engineers_key = 'TASHKENT_ENGINEERS' if region == 'TASHKENTREGION' else f'{region}_ENGINEERS' # Для TASHKENTREGION используем TASHKENT_ENGINEERS
+    engineers_str = os.getenv(engineers_key, '')
     if engineers_str:
-        REGION_ENGINEERS[region] = [username.strip() for username in engineers_str.split(',') if username.strip()]
+        REGION_ENGINEERS['region'] = [username.strip() for username in engineers_str.split(',') if username.strip()]
 
 # init the highTempBot
 bot = Bot(token=TELEGRAM_TOKEN) # , session=AiohttpSession(proxy=str(PROXY_URL))
 
 
-def get_region(site_id):
+def get_region(alarm):
+    me = alarm.get('me', '')
+    region = alarm.get('region', '').strip().upper()
     """Определяет ID Telegram-группы по первым двум символам site_id из переменных окружения"""
     region_mapping = {
-        'AN': os.getenv('CHAT_ID_AN'),
-        'BH': os.getenv('CHAT_ID_BH'),
-        'DZ': os.getenv('CHAT_ID_DZ'),
-        'FR': os.getenv('CHAT_ID_FR'),
-        'KR': os.getenv('CHAT_ID_KR'),
-        'KS': os.getenv('CHAT_ID_KS'),
-        'KH': os.getenv('CHAT_ID_KH'),
-        'NV': os.getenv('CHAT_ID_NV'),
-        'SM': os.getenv('CHAT_ID_SM'),
-        'SR': os.getenv('CHAT_ID_SR'),
-        'SU': os.getenv('CHAT_ID_SU'),
+        'ANDIJAN': os.getenv('CHAT_ID_AN'),
+        'BUKHARA': os.getenv('CHAT_ID_BH'),
+        'DJIZZAK': os.getenv('CHAT_ID_DZ'),
+        'FERGANA': os.getenv('CHAT_ID_FR'),
+        'KARAKALPAKISTAN': os.getenv('CHAT_ID_KR'),
+        'KASHKADARYA': os.getenv('CHAT_ID_KS'),
+        'KHOREZM': os.getenv('CHAT_ID_KH'),
+        'NAVOI': os.getenv('CHAT_ID_NV'),
+        'SAMARKAND': os.getenv('CHAT_ID_SM'),
+        'SIRDARYA': os.getenv('CHAT_ID_SR'),
+        'SURKHANDARYA': os.getenv('CHAT_ID_SU'),
     }
-    region_code = site_id[:2] if len(site_id) >= 2 else ""
-    chat_id = region_mapping.get(region_code, TELEGRAM_CHAT_ID)
-    if chat_id == TELEGRAM_CHAT_ID:
-        logging.warning(f"Region not found for site_id {site_id}, using default chat_id {chat_id}")
-    if chat_id == None:
-        logging.error(f"No chat_id found for region {region_code} and no default GROUP_ID")
-    return chat_id, region_code
+
+    if region and region in region_mapping:
+        chat_id = region_mapping.get(region)
+        if chat_id:
+            logging.info(f"Using API region {region} with chat_id {chat_id} for alarms {me}")
+            return chat_id, region
+        else:
+            logging.warning(f"No chat_id found for API region {region} for alarm {me}")
+        
+    # Fallback регион из API
+    chat_id = TELEGRAM_CHAT_ID
+    logging.warning(f"Invalid or missing region {region} for alarm {me}, using default chat id {chat_id}")
+    return chat_id, region if region else "UNKNOWN"
+
 
 
 def load_sent_alarms():
@@ -119,18 +129,21 @@ async def send_alarm_message(alarm):
         logging.warning(f"Failed to format time for alarm {alarm.get('me', 'unknown')}: {e}")
 
     me = alarm.get('me', '')
-    chat_id, region_code = get_region(me)
+    chat_id, region = get_region(alarm)
     if chat_id is None:
-        logging.error(f"Skipping message for alarm {me} no valid chat_id")
+        logging.error(f"Skipping message for alarm {me}: no valid chat_id")
         return
-    logging.debug(f"Sending message for alarm {me} to the chat_id {chat_id}")
+    logging.debug(f"Sending message for alarm {me} to chat_id {chat_id}")
 
-    # упоминания инженеров
-    engineer_mentions = COMMON_ENGINEERS.copy()
-    region_engineers = REGION_ENGINEERS.get(region_code, [])
+    # forming engineers mention
+    engineer_mentions = COMMON_ENGINEERS.copy() 
+    # for TASHKENTREGION we r using TASHKENT ENGINEERS
+    engineer_region = 'TASHKENT' if region == 'TASHKENTREGION' else region 
+    region_engineers = REGION_ENGINEERS.get(engineer_region, [])
     if not region_engineers:
-        logging.warning(f"No engineers defined for region {region_code}")
+        logging.warning(f"No engineers defined for region {engineer_region}")
     engineer_mentions.extend(region_engineers)
+
 
     engineers_text = f"👷 {hbold('Инженеры')}: {', '.join(engineer_mentions)}\n" if engineer_mentions else ""
 
