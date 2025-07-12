@@ -39,7 +39,7 @@ for region in regions:
     engineers_key = 'TASHKENT_ENGINEERS' if region == 'TASHKENTREGION' else f'{region}_ENGINEERS' # Для TASHKENTREGION используем TASHKENT_ENGINEERS
     engineers_str = os.getenv(engineers_key, '')
     if engineers_str:
-        REGION_ENGINEERS['region'] = [username.strip() for username in engineers_str.split(',') if username.strip()]
+        REGION_ENGINEERS[region] = [username.strip() for username in engineers_str.split(',') if username.strip()]
         
 
 # init the highTempBot
