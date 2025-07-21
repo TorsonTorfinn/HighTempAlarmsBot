@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 from aiogram import Bot
-from aiogram.utils.markdown import hcode, hbold, hlink
+from aiogram.utils.markdown import hcode, hbold
 from aiogram.client.session.aiohttp import AiohttpSession
 
 # логированиe с ротацией + консольны вывод
