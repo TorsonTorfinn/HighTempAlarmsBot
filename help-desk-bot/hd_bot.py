@@ -2,6 +2,7 @@ import os
 import asyncio
 import logging
 import websockets
+
 import json
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
@@ -50,3 +51,23 @@ ENGINEERS = {
     "KASHKADARYA": os.getenv("KASHKADARYA_ENGINEERS").split(","),
 }
 
+
+async def send_to_telegram(bot, message, chat_id):
+    pass
+
+
+async def format_message(data, ws_type):
+    pass
+
+
+async def websocket_handler(uri, ws_type, bot):
+    pass
+
+
+async def main():
+    """bot init n start, websocket handlers"""
+    pass
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
