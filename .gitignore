@@ -15,3 +15,5 @@ dict_regions.py
 py-bot/sent_alarms.json
 py-bot/bot.log
 tt.py
+help-desk-bot/eng.py
+TelegramBotHighTemperatureAlarms\help-desk-bot\eng.py
