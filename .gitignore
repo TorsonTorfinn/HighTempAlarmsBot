@@ -9,11 +9,8 @@ __pycache__/
 *.token
 
 data
-
-dict_regions.py
-
+tests
 py-bot/sent_alarms.json
 py-bot/bot.log
-tt.py
 help-desk-bot/eng.py
-TelegramBotHighTemperatureAlarms\help-desk-bot\eng.py
+rssi_analyze/*.xlsx
