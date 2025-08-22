@@ -158,8 +158,8 @@ async def main():
     dp = Dispatcher()
 
     tasks = [
-        websocket_handler("ws://nims/ws2/power/", "power", bot),
-        websocket_handler("ws://nims/ws2/sitedown/", "sitedown", bot),
+        websocket_handler(os.getenv('WEBSOCKET_DOWN'), "SITE DOWN", bot),
+        websocket_handler(os.getenv('WEBSOCKET_POWER'), "MAINS POWER", bot),
     ]
     await asyncio.gather(*tasks)
 
