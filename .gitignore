@@ -12,5 +12,7 @@ data
 tests
 py-bot/sent_alarms.json
 py-bot/bot.log
-help-desk-bot/eng.py
+help-desk-bot/tester.py
+help-desk-bot/*.txt
+help-desk-bot/*.json
 rssi_analyze/*.xlsx

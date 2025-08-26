@@ -3,6 +3,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 from aiogram import Bot, Dispatcher
+import asyncio
+import websockets
+import json
 
 
 logging.basicConfig(level=logging.INFO)
@@ -48,10 +51,18 @@ ENGINEERS = {
 alarms_storage = {}
 
 async def send_to_telegram(bot, message, chat_id):
-    pass
+    try:
+        await asyncio.sleep(7)
+        await bot.send_message(chat_id=chat_id, text=message, parse_mode='HTML')
+        logger.info(f"Message was successfully send to the {chat_id}: {message}")
+    except Exception as e:
+        logger.error(f"Error during sending message to the Telegram: {e}")
+
 
 async def format_phones(phone_str):
-    pass
+    if phone_str == 'Unknown':
+        return 'No Phone Number Data'
+    return ', '.join([f'+{phone.strip()}' for phone in phone_str.split(',')])
 
 
 async def format_table(alarms, ws_type):
@@ -63,16 +74,41 @@ async def send_batch_messages(bot):
 
 
 async def websocket_handler(uri, ws_type, bot):
-    pass 
+    while True:
+        try:
+            async with websockets.connect(uri) as ws:
+                logger.info(f"Successfully connected to {uri}")
+                while True:
+                    message = await ws.recv() # json from ws
+                    try:
+                        data_list = json.loads(message) # js -> pydick
+                        for data in data_list:
+                            region = data.get('region', 'Unknown') # gettin regions from data 
+                            if region not in alarms_storage:
+                                alarms_storage[region] = {} # {"AN": {}, "TAS": {} ...}
+                            if ws_type not in alarms_storage[region]:
+                                alarms_storage[region][ws_type] = [] # { "AN": { "SITEDOWN": [{..}, {..}], "MAINSPOWER": [{..}, {..}] } }
+                            alarms_storage[region][ws_type].append(data) 
+                    except json.JSONDecodeError:
+                        logger.error(f'Error during JSON decoding: {message}')
+        except websockets.exceptions.ConnectionClosed:
+            logger.warning(f"Connection with {uri} was interrupted. Reconnect in 5 sec...")
+        except Exception as e:
+            logger.error(f"WebSockets Error {uri}: {e}; Reconnect in 5 sec...")
+        await asyncio.sleep(10)
 
 
 async def main():
     bot = Bot(token=HD_TELEGRAM_TOKEN)
-    dp = Dispatcher
+    dp = Dispatcher()
 
     tasks = [
         websocket_handler(os.getenv('WEBSOCKET_DOWN'), "SITE DOWN", bot),
         websocket_handler(os.getenv('WEBSOCKET_POWER'), "MAINS POWER", bot),
         send_batch_messages(bot),
     ]
+    await asyncio.gather(*tasks)
 
+
+if __name__ == '__main__':
+    asyncio.run(main())
