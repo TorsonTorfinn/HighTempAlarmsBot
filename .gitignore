@@ -15,4 +15,5 @@ py-bot/bot.log
 help-desk-bot/tester.py
 help-desk-bot/*.txt
 help-desk-bot/*.json
+help-desk-bot/batt.py
 rssi_analyze/*.xlsx

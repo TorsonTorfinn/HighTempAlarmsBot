@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 
-alarm_logs_df = pd.read_excel('AlarmLogs20250821104405991.xlsx', skiprows=5)
-rssi_df = pd.read_excel('L_CellSectorEQUIP_UL_RSSI_Avg_Ant_20250820150935-20250820161351.xlsx', 
+alarm_logs_df = pd.read_excel('AlarmLogs20250828110436831.xlsx', skiprows=5)
+rssi_df = pd.read_excel('L_CellSectorEQUIP_UL_RSSI_Avg_Ant_20250820150935-20250828080000.xlsx', 
                    parse_dates=['Date'],
                    na_values=['NIL'],
                    dtype={'L.CellSectorEQUIP.UL.RSSI.Avg.Ant0(dBm)': float, 'L.CellSectorEQUIP.UL.RSSI.Avg.Ant1(dBm)': float,
@@ -26,7 +26,7 @@ def rssi_proccessing(rssi_df, alarm_logs_df):
 
     alarm_logs_df = (alarm_logs_df[['Alarm Source', 'CELL Name', 'Local cell ID']])
     alarm_logs_df = alarm_logs_df[~alarm_logs_df['Local cell ID'].isin([21, 22, 23])]
-    alarm_logs_df = alarm_logs_df.groupby(['Alarm Source', 'CELL Name', 'Local cell ID']).size().reset_index(name='Count cell ID')
+    alarm_logs_df = alarm_logs_df.groupby(['Alarm Source', 'CELL Name', 'Local cell ID']).size().reset_index(name='Alarms count on cell ID')
     alarm_logs_df = alarm_logs_df.rename(columns={'Alarm Source': 'eNodeB Name'})
 
     rssi_df = pd.merge(rssi_df, alarm_logs_df, on=['eNodeB Name', 'Local cell ID'], how='inner')
