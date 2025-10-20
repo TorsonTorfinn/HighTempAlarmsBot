@@ -82,7 +82,7 @@ def format_phone_numbers(phone_str):
     return ', '.join([f'+{phone.strip()}' for phone in phone_str.split(',')])
 
 
-def generate_table_image(alarms, ws_type): 
+def generate_table_image(alarms, dg_engineer): 
     if not alarms:
         return None
     
@@ -102,7 +102,7 @@ def generate_table_image(alarms, ws_type):
     
     fig, ax = plt.subplots(figsize=(12, len(rows) * 0.5 + 1))
     ax.axis('off')
-    ax.set_title(f'Alarm Type: {ws_type.upper()}', fontsize=14, fontweight='bold')
+    ax.set_title(f'Alarm Types: POWER + DOWN for {dg_engineer}', fontsize=14, fontweight='bold')
     table = ax.table(cellText=rows, colLabels=columns, cellLoc='center', loc='center')
     table.auto_set_font_size(False)
     table.set_fontsize(10)
@@ -116,43 +116,59 @@ def generate_table_image(alarms, ws_type):
     return buff
 
 async def send_batch_messages(bot): # batch messages formatter
+    await send_to_telegram(bot, None, 'Bot Started!', REGION_GROUPS.get('TASHKENT'))
     while True:
-        await asyncio.sleep(900)
+        await asyncio.sleep(10)
         logger.info(f'Current state of Alarm Storage: {alarm_storage}')
+        
+        dg_engineer_alarms = {}
         for region, types in alarm_storage.items():
-            chat_id = REGION_GROUPS.get(region)
-            if not chat_id:
-                logger.warning(f'Region: {region} was not found in REGION_GROUPS')
+            for ws_type, alarms in types.items():
+                for data in alarms:
+                    dg_engineer = data.get('dg_engineer', 'Unknown')
+                    if dg_engineer == 'Unknown':
+                        logger.warning(f'For this alarm: {alarms} DG ENGINEER IS UNKNOWN')
+                        continue
+                    if dg_engineer not in dg_engineer_alarms:
+                        dg_engineer_alarms[dg_engineer] = []
+                    dg_engineer_alarms[dg_engineer].append(data)
+        
+        for dg_engineer, alarms in dg_engineer_alarms.items():
+            image_buff = generate_table_image(alarms, dg_engineer)
+            if not image_buff:
                 continue
 
-            region_engineers_ncc = ENGINEERS.get(region, [])
-            common_engineers_ncc = ENGINEERS.get('COMMON_ENGINEERS', [])
-            ncc_engineers = list(set(region_engineers_ncc + common_engineers_ncc))
-            ncc_tags = ', '.join([tag for tag in ncc_engineers if tag]) or 'No data NCC engineer tag data'
+            # groupping by regions for sending
+            regions = set(data.get('region', 'Unknown') for data in alarms)
+            for region in regions:
+                if region == 'Unknown':
+                    continue
+                chat_id = REGION_GROUPS.get(region)
+                if not chat_id:
+                    logger.warning(f'Region: {region} was not found in REGION_GROUPS')
+                    continue
 
-            has_alarms = False
-            for ws_type, alarms in types.items():
-                image_buff = generate_table_image(alarms, ws_type)
-                if image_buff:
-                    has_alarms = True
-                    dg_engineers = set()
-                    for data in alarms:
-                        dg_engineer = data.get('dg_engineer', 'Unknown')
-                        dg_engineer_phone = data.get('dg_engineer_phone', 'Unknown')
-                        if dg_engineer != 'Unknown' and dg_engineer_phone != 'Unknown':
-                            dg_engineers.add(f"{dg_engineer} ({format_phone_numbers(dg_engineer_phone)})")
-                    
-                    caption = (
-                        f"Alarms in {region} in 15 min:\n\n"
-                        f"DG engineers: {', '.join(dg_engineers) or 'No DG engineers data'}\n"
-                        f"NCC engineers: {ncc_tags}"
-                    )
-                    logger.info(f"Creating caption for telegram notification {region}: {caption}")
-                    await send_to_telegram(bot, image_buff, caption, chat_id)
+                # gettin ncc engineers
+                region_engineers_ncc = ENGINEERS.get(region, [])
+                common_engineers_ncc = ENGINEERS.get('COMMON', [])
+                ncc_engineers = list(set(region_engineers_ncc + common_engineers_ncc))
+                ncc_tags = ', '.join([tag for tag in ncc_engineers if tag]) or 'No data NCC engineer tag data'
 
-            if not has_alarms:
-                logger.info(f"There are no alarms about: {region} region")
-            
+                # Получение номера телефона DG Engineer
+                dg_engineer_phone = next(
+                    (data.get('dg_engineer_phone', 'Unknown') for data in alarms if data.get('dg_engineer') == dg_engineer),
+                    'Unknown'
+                )
+                caption = (
+                    f"Alarms for {dg_engineer} in {region} in 15 min:\n\n"
+                    f"DG engineer: {dg_engineer} ({format_phone_numbers(dg_engineer_phone)})\n"
+                    f"NCC engineers: {ncc_tags}"
+                )
+                logger.info(f"Creating caption for telegram notification {region}: {caption}")
+                await send_to_telegram(bot, image_buff, caption, chat_id)
+
+        if not dg_engineer_alarms:
+            logger.info("No alarms to send")
         alarm_storage.clear()
 
 
