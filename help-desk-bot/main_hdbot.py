@@ -11,7 +11,7 @@ from aiogram.enums import ParseMode
 import matplotlib.pyplot as plt
 from io import BytesIO
 from datetime import datetime
-
+import pandas as pd
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,20 +20,36 @@ env_path = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 HD_TELEGRAM_TOKEN = os.getenv('HD_TG_TOKEN')
 
+# TEST_REGION_GROUPS = {
+#     "ANDIJAN": int(os.getenv("TEST_CHAT_ID_AN")),
+#     "BUKHARA": int(os.getenv("TEST_CHAT_ID_BH")),
+#     "DJIZZAK": int(os.getenv("TEST_CHAT_ID_DZ")),
+#     "FERGANA": int(os.getenv("TEST_CHAT_ID_FR")),
+#     "KHOREZM": int(os.getenv("TEST_CHAT_ID_KR")),
+#     "KASHKADARYA": int(os.getenv("TEST_CHAT_ID_KS")),
+#     "KARAKALPAKISTAN": int(os.getenv("TEST_CHAT_ID_KH")),
+#     "NAVOI": int(os.getenv("TEST_CHAT_ID_NV")),
+#     "SAMARKAND": int(os.getenv("TEST_CHAT_ID_SM")),
+#     "SIRDARYA": int(os.getenv("TEST_CHAT_ID_SR")),
+#     "SURKHANDARYA": int(os.getenv("TEST_CHAT_ID_SU")),
+#     "TASHKENT": int(os.getenv("TEST_CHAT_ID_TS")),
+#     "TASHKENTREGION": int(os.getenv("TEST_CHAT_ID_TS")),  # То же chat_id, что для TASHKENT
+# }
+
 REGION_GROUPS = {
-    "ANDIJAN": int(os.getenv("TEST_CHAT_ID_AN")),
-    "BUKHARA": int(os.getenv("TEST_CHAT_ID_BH")),
+    "ANDIJAN": int(os.getenv("MG_CHAT_ID_AN")),
+    "BUKHARA": int(os.getenv("MG_CHAT_ID_BH")),
     "DJIZZAK": int(os.getenv("TEST_CHAT_ID_DZ")),
-    "FERGANA": int(os.getenv("TEST_CHAT_ID_FR")),
-    "KHOREZM": int(os.getenv("TEST_CHAT_ID_KR")),
-    "KASHKADARYA": int(os.getenv("TEST_CHAT_ID_KS")),
-    "KARAKALPAKISTAN": int(os.getenv("TEST_CHAT_ID_KH")),
-    "NAVOI": int(os.getenv("TEST_CHAT_ID_NV")),
-    "SAMARKAND": int(os.getenv("TEST_CHAT_ID_SM")),
-    "SIRDARYA": int(os.getenv("TEST_CHAT_ID_SR")),
-    "SURKHANDARYA": int(os.getenv("TEST_CHAT_ID_SU")),
-    "TASHKENT": int(os.getenv("TEST_CHAT_ID_TS")),
-    "TASHKENTREGION": int(os.getenv("TEST_CHAT_ID_TS")),  # То же chat_id, что для TASHKENT
+    "FERGANA": int(os.getenv("MG_CHAT_ID_FR")),
+    "KHOREZM": int(os.getenv("MG_CHAT_ID_KR")),
+    "KASHKADARYA": int(os.getenv("MG_CHAT_ID_KS")),
+    "KARAKALPAKISTAN": int(os.getenv("MG_CHAT_ID_KH")),
+    "NAVOI": int(os.getenv("MG_CHAT_ID_NV")),
+    "SAMARKAND": int(os.getenv("MG_CHAT_ID_SM")),
+    "SIRDARYA": int(os.getenv("MG_CHAT_ID_SR")),
+    "SURKHANDARYA": int(os.getenv("MG_CHAT_ID_SU")),
+    "TASHKENT": int(os.getenv("MG_CHAT_ID_TS")),
+    "TASHKENTREGION": int(os.getenv("MG_CHAT_ID_TS")),  # То же chat_id, что для TASHKENT
 }
 
 ENGINEERS = {
@@ -55,8 +71,22 @@ ENGINEERS = {
 
 alarm_storage = {}
 
+DG_PHONE_TO_USERNAME = {} # dict for comprasion phone & tg user
+
+
+def load_dg_engineers_xlsx(xlsx_path):
+    global DG_PHONE_TO_USERNAME
+    try:
+        df = pd.read_excel(xlsx_path)
+        DG_PHONE_TO_USERNAME = dict(zip(df['phonenumber'].astype(str), df["telegram_username"].astype(str)))
+        logger.info(f'From XLSX {len(DG_PHONE_TO_USERNAME)} DG engineers were loaded.')
+    except Exception as e:
+        logger.error(f"Error xlsx loading: {e}")
+
+
 
 async def send_to_telegram(bot, photo, caption, chat_id):
+    """sending a table (pic) with a caption to a MG groups"""
     try:
         await asyncio.sleep(7)
         if photo:
@@ -76,13 +106,16 @@ async def send_to_telegram(bot, photo, caption, chat_id):
         logger.error(f"Error while sending to the Telegram (chat_id={chat_id}): {e}")
 
 
+
 def format_phone_numbers(phone_str):
     if not phone_str or phone_str == 'Unknow':
         return 'No actual data of phone numbers'
     return ', '.join([f'+{phone.strip()}' for phone in phone_str.split(',')])
 
 
-def generate_table_image(alarms, dg_engineer): 
+
+def generate_table_image(alarms, dg_engineer):
+    """generating a table img wit matplotlib"""
     if not alarms:
         return None
     
@@ -115,10 +148,12 @@ def generate_table_image(alarms, dg_engineer):
     plt.close(fig)
     return buff
 
+
+
 async def send_batch_messages(bot): # batch messages formatter
     await send_to_telegram(bot, None, 'Bot Started!', REGION_GROUPS.get('TASHKENT'))
     while True:
-        await asyncio.sleep(10)
+        await asyncio.sleep(120)
         logger.info(f'Current state of Alarm Storage: {alarm_storage}')
         
         dg_engineer_alarms = {}
@@ -155,13 +190,25 @@ async def send_batch_messages(bot): # batch messages formatter
                 ncc_tags = ', '.join([tag for tag in ncc_engineers if tag]) or 'No data NCC engineer tag data'
 
                 # Получение номера телефона DG Engineer
-                dg_engineer_phone = next(
-                    (data.get('dg_engineer_phone', 'Unknown') for data in alarms if data.get('dg_engineer') == dg_engineer),
-                    'Unknown'
-                )
+                dg_engineer_phone = next((data.get('dg_engineer_phone', 'Unknown') for data in alarms if data.get('dg_engineer') == dg_engineer), 'Unknown')
+
+                # look up usernames by phones
+                dg_username = DG_PHONE_TO_USERNAME.get(dg_engineer_phone, None)
+                if dg_username:
+                    dg_display = f"{dg_username.strip()}"
+                else:
+                    dg_display = f"{dg_engineer} ({format_phone_numbers(dg_engineer_phone)})"
+
+                # OLD ONE CAP CUZ NOW NO NEED FOR PHONE FORMATTING
+                # caption = (
+                #     f"Alarms for {dg_engineer} in {region} in 15 min:\n\n"
+                #     f"DG engineer: {dg_engineer} ({format_phone_numbers(dg_engineer_phone)})\n"
+                #     f"NCC engineers: {ncc_tags}"
+                # )
+
                 caption = (
-                    f"Alarms for {dg_engineer} in {region} in 15 min:\n\n"
-                    f"DG engineer: {dg_engineer} ({format_phone_numbers(dg_engineer_phone)})\n"
+                    f"Alarms for {dg_display} in {region} in 15 min:\n\n"
+                    f"DG engineer: {dg_display}\n"
                     f"NCC engineers: {ncc_tags}"
                 )
                 logger.info(f"Creating caption for telegram notification {region}: {caption}")
@@ -172,7 +219,8 @@ async def send_batch_messages(bot): # batch messages formatter
         alarm_storage.clear()
 
 
-async def websocket_handler(uri, ws_type, bot): # handling ws data into storage dict 
+
+async def websocket_handler(uri, ws_type, bot): # handling ws data into storage dict ""
     while True:
         try:
             async with websockets.connect(uri) as ws_connection:
@@ -199,7 +247,11 @@ async def websocket_handler(uri, ws_type, bot): # handling ws data into storage 
         await asyncio.sleep(5)
 
 
+
 async def main():
+    excel_path = "dg_engineers.xlsx"
+    load_dg_engineers_xlsx(excel_path)
+
     bot = Bot(token=HD_TELEGRAM_TOKEN)
     dp = Dispatcher()
     tasks = [
