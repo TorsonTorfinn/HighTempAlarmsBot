@@ -15,6 +15,7 @@ from aiogram.types import FSInputFile
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
+from aiogram.client.session.aiohttp import AiohttpSession
 
 
 load_dotenv()
@@ -34,6 +35,7 @@ API_URL = os.getenv("NIMS_API_ACTIVE_ALARMS")
 API_TOKEN = os.getenv("NIMS_TOKEN")
 BOT_TOKEN = os.getenv("NCC_OPER_BOT_TOKEN")
 CHAT_ID = int(os.getenv("NCC_OPER_CHAT_ID"))
+PROXY_URL = os.getenv('PROXY_URL')
 
 CHECK_INTERVAL = 15
 REPORT_INTERVAL = 60
@@ -61,10 +63,7 @@ console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
 
-bot = Bot(
-    token=BOT_TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-)
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML), session=AiohttpSession(proxy=str(PROXY_URL)))
 dp = Dispatcher()
 
 
@@ -111,14 +110,7 @@ async def fetch_alarms():
 def process_alarms(data):
     logger.info("PROCESS START")
 
-    stats = defaultdict(
-        lambda: {
-            "power": 0,
-            "dg": 0,
-            "mg": 0,
-            "site_down": 0,
-        }
-    )
+    stats = defaultdict(lambda: {"power": 0, "dg": 0, "mg": 0, "site_down": 0,})
 
     for alarm in data:
         region = (alarm.get("region") or "UNKNOWN").upper()
@@ -148,10 +140,7 @@ async def update_state(stats):
     all_regions = sorted(set(state.keys()) | set(stats.keys()))
 
     for region in all_regions:
-        values = stats.get(
-            region,
-            {"power": 0, "dg": 0, "mg": 0, "site_down": 0},
-        )
+        values = stats.get(region, {"power": 0, "dg": 0, "mg": 0, "site_down": 0},)
         power = values["power"]
 
         if region not in state:
@@ -199,9 +188,7 @@ async def update_state(stats):
 
 
 def get_active_regions():
-    return sorted(
-        region for region, region_state in state.items() if region_state.get("status") == "active"
-    )
+    return sorted(region for region, region_state in state.items() if region_state.get("status") == "active")
 
 
 def generate_image(stats):
@@ -212,13 +199,7 @@ def generate_image(stats):
 
     logger.info("GENERATE IMAGE | active_regions=%s", regions)
 
-    rows = [
-        "Время МО ЭП",
-        "Нет ЭП",
-        "ДГ",
-        "МГ",
-        "Кол-во недоступных БС",
-    ]
+    rows = ["Время МО ЭП", "Нет ЭП", "ДГ", "МГ", "Кол-во недоступных БС",]
 
     try:
         font = ImageFont.truetype("arial.ttf", 18)
