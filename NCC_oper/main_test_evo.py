@@ -39,6 +39,7 @@ PROXY_URL = os.getenv('PROXY_URL')
 
 CHECK_INTERVAL = 15
 REPORT_INTERVAL = 60
+REPORT_JOB_INTERVAL = 15
 POWER_THRESHOLD = 40
 CHECK_CLOSE_COUNT = 2
 
@@ -84,8 +85,45 @@ def save_state(data):
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 
+def parse_iso(ts):
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(ts)
+    except Exception:
+        return None
+
+
+def mark_regions_report_sent(regions):
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    for region in regions:
+        if region in state:
+            state[region]["last_report_sent_at"] = now_iso
+
+
+def get_due_hourly_regions():
+    now = datetime.now()
+    due = []
+
+    for region, region_state in state.items():
+        if region_state.get("status") != "active":
+            continue
+
+        last_sent = parse_iso(region_state.get("last_report_sent_at"))
+        if last_sent is None:
+            due.append(region)
+            continue
+
+        minutes_passed = (now - last_sent).total_seconds() / 60
+        if minutes_passed >= REPORT_INTERVAL:
+            due.append(region)
+
+    return sorted(due)
+
+
 state = load_state()
 last_stats = {}
+job_lock = asyncio.Lock()
 
 
 async def fetch_alarms():
@@ -148,9 +186,11 @@ async def update_state(stats):
                 "status": "closed",
                 "start_time": None,
                 "check_count": 0,
+                "last_report_sent_at": None,
             }
 
         region_state = state[region]
+        region_state.setdefault("last_report_sent_at", None)
         status_before = region_state["status"]
 
         if power >= POWER_THRESHOLD:
@@ -158,6 +198,7 @@ async def update_state(stats):
                 region_state["status"] = "active"
                 region_state["start_time"] = now_str()
                 region_state["check_count"] = 0
+                region_state["last_report_sent_at"] = None
                 started.append(region)
                 logger.warning("MO START | region=%s | power=%s", region, power)
             else:
@@ -183,6 +224,7 @@ async def update_state(stats):
                     logger.warning("MO END | region=%s | power=%s", region, power)
                     region_state["start_time"] = None
                     region_state["check_count"] = 0
+                    region_state["last_report_sent_at"] = None
 
     return started, finished
 
@@ -191,8 +233,8 @@ def get_active_regions():
     return sorted(region for region, region_state in state.items() if region_state.get("status") == "active")
 
 
-def generate_image(stats):
-    regions = get_active_regions()
+def generate_image(stats, regions):
+    regions = sorted(regions)
 
     if not regions:
         return None
@@ -301,21 +343,24 @@ def generate_image(stats):
     return REPORT_FILE
 
 
-async def send_report(stats):
-    active_regions = get_active_regions()
-    logger.info("SEND REPORT | active_regions=%s", active_regions)
+async def send_report(stats, regions, reason):
+    regions = sorted(regions)
+    logger.info("SEND REPORT | reason=%s | regions=%s", reason, regions)
 
-    if not active_regions:
-        logger.info("NO ACTIVE REGIONS | skip report")
-        return
+    if not regions:
+        logger.info("NO REGIONS TO REPORT | reason=%s", reason)
+        return False
 
-    path = generate_image(stats)
+    path = generate_image(stats, regions)
     if not path:
         logger.warning("REPORT IMAGE NOT GENERATED")
-        return
+        return False
 
     await bot.send_photo(chat_id=CHAT_ID, photo=FSInputFile(path))
-    logger.info("REPORT SENT")
+    logger.info("REPORT SENT | reason=%s | regions=%s", reason, regions)
+    mark_regions_report_sent(regions)
+    save_state(state)
+    return True
 
 
 async def send_finished(regions):
@@ -334,35 +379,43 @@ async def send_finished(regions):
 async def check_job():
     global last_stats
 
-    logger.info("=== CHECK JOB ===")
-    data = await fetch_alarms()
+    async with job_lock:
+        logger.info("=== CHECK JOB ===")
+        data = await fetch_alarms()
 
-    if data is None:
-        logger.warning("CHECK SKIPPED | no data from API")
-        return
+        if data is None:
+            logger.warning("CHECK SKIPPED | no data from API")
+            return
 
-    stats = process_alarms(data)
-    started, finished = await update_state(stats)
+        stats = process_alarms(data)
+        started, finished = await update_state(stats)
 
-    save_state(state)
-    last_stats = stats
+        save_state(state)
+        last_stats = stats
 
-    if started:
-        await send_report(stats)
+        if started:
+            # Start report includes only regions that became active in this check cycle.
+            # If several regions started together, they are sent as one combined table.
+            await send_report(stats, started, reason="start")
 
-    if finished:
-        await send_finished(finished)
+        if finished:
+            await send_finished(finished)
 
 
 async def report_job():
-    logger.info("=== REPORT JOB ===")
-    await check_job()
+    async with job_lock:
+        logger.info("=== REPORT JOB ===")
 
-    if not last_stats:
-        logger.info("NO DATA FOR HOURLY REPORT")
-        return
+        if not last_stats:
+            logger.info("NO DATA FOR HOURLY REPORT")
+            return
 
-    await send_report(last_stats)
+        due_regions = get_due_hourly_regions()
+        if not due_regions:
+            logger.info("SKIP HOURLY REPORT | no regions reached 60 min since last report")
+            return
+
+        await send_report(last_stats, due_regions, reason="hourly")
 
 
 async def main():
@@ -370,11 +423,11 @@ async def main():
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(check_job, "interval", minutes=CHECK_INTERVAL)
-    scheduler.add_job(report_job, "interval", minutes=REPORT_INTERVAL)
+    # Run hourly-due scan every 15 minutes; each region is sent only when 60+ minutes elapsed.
+    scheduler.add_job(report_job, "interval", minutes=REPORT_JOB_INTERVAL)
     scheduler.start()
 
     await check_job()
-    await report_job()
     await dp.start_polling(bot)
 
 
