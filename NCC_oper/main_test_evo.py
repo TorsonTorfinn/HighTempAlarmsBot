@@ -18,7 +18,8 @@ from PIL import Image, ImageDraw, ImageFont
 from aiogram.client.session.aiohttp import AiohttpSession
 
 
-load_dotenv()
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 BASE_DIR = Path(__file__).resolve().parent
 RUNTIME_DIR = BASE_DIR / "test_evo_runtime"
@@ -64,7 +65,12 @@ console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
 
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML), session=AiohttpSession(proxy=str(PROXY_URL)))
+session = AiohttpSession(proxy=str(PROXY_URL)) if PROXY_URL else AiohttpSession()
+bot = Bot(
+    token=BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    session=session,
+)
 dp = Dispatcher()
 
 
