@@ -40,8 +40,7 @@ PROXY_URL = os.getenv("PROXY_URL")
 
 CHECK_INTERVAL = 15
 REPORT_INTERVAL = 60
-REPORT_JOB_INTERVAL = 15
-POWER_THRESHOLD = 5
+POWER_THRESHOLD = 40
 CHECK_CLOSE_COUNT = 2
 
 
@@ -442,15 +441,6 @@ async def check_job():
         if finished:
             await send_finished(finished)
 
-
-async def report_job():
-    async with job_lock:
-        logger.info("=== REPORT JOB ===")
-
-        if not last_stats:
-            logger.info("NO DATA FOR HOURLY REPORT")
-            return
-
         due_regions = get_due_hourly_regions()
         if not due_regions:
             logger.info("SKIP HOURLY REPORT | no regions reached 60 min since last report")
@@ -464,7 +454,6 @@ async def main():
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(check_job, "interval", minutes=CHECK_INTERVAL)
-    scheduler.add_job(report_job, "interval", minutes=REPORT_JOB_INTERVAL)
     scheduler.start()
 
     await check_job()
